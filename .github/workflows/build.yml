@@ -150,15 +150,6 @@ jobs:
       with:
         name: DomainExtractor-Windows-Portable
         path: DomainExtractor-Windows-Portable.zip
-
-    - name: Create release
-      uses: softprops/action-gh-release@v2
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        files: dist/*.zip
-        tag_name: ${{ steps.tag.outputs.tag }}
-        name: Release ${{ steps.tag.outputs.tag }}
         draft: false
         prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
         generate_release_notes: true
