@@ -1,0 +1,152 @@
+name: Build and Release Domain Extractor
+
+on:
+  push:
+    tags:
+      - 'v*'  # Запуск при создании тега версии (например, v1.0.0)
+  workflow_dispatch:  # Ручной запуск
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        
+    - name: Build executable
+      run: |
+        pyinstaller --onefile --windowed --name="DomainExtractor" --icon=icon.ico domain_extractor.py
+      continue-on-error: true
+      
+    - name: Build executable (without icon)
+      if: failure()
+      run: |
+        pyinstaller --onefile --windowed --name="DomainExtractor" domain_extractor.py
+        
+    - name: Create distribution folder
+      run: |
+        mkdir distribution
+        copy dist\DomainExtractor.exe distribution\
+        echo "# Domain Extractor - Обработчик доменных имен" > distribution\README.txt
+        echo "" >> distribution\README.txt
+        echo "Программа для извлечения и обработки доменных имен из файлов." >> distribution\README.txt
+        echo "" >> distribution\README.txt
+        echo "Инструкция по использованию:" >> distribution\README.txt
+        echo "1. Запустите DomainExtractor.exe" >> distribution\README.txt
+        echo "2. Выберите входной файл с доменами" >> distribution\README.txt
+        echo "3. Выберите выходной файл для результатов" >> distribution\README.txt
+        echo "4. Настройте параметры обработки" >> distribution\README.txt
+        echo "5. Нажмите 'Обработать файл'" >> distribution\README.txt
+        
+    - name: Create ZIP archive
+      run: |
+        powershell Compress-Archive -Path distribution\* -DestinationPath DomainExtractor-Windows-x64.zip
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: DomainExtractor-Windows
+        path: DomainExtractor-Windows-x64.zip
+        
+    - name: Get version from tag
+      id: get_version
+      shell: bash
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        else
+          echo "VERSION=dev-$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          DomainExtractor-Windows-x64.zip
+        body: |
+          ## Domain Extractor ${{ steps.get_version.outputs.VERSION }}
+          
+          ### Скачать
+          - **Windows (x64)**: DomainExtractor-Windows-x64.zip
+          
+          ### Новое в этой версии
+          - Извлечение доменных имен из файлов
+          - Настраиваемые форматы вывода
+          - Поддержка префиксов и суффиксов
+          - Различные разделители (строка, пробел, запятая, табуляция)
+          - Удаление дубликатов и сортировка
+          - Предпросмотр результатов
+          
+          ### Системные требования
+          - Windows 10/11 (64-bit)
+          - Не требует установки Python
+          
+          ### Установка
+          1. Скачайте архив DomainExtractor-Windows-x64.zip
+          2. Распакуйте в любую папку
+          3. Запустите DomainExtractor.exe
+          
+          ### Использование
+          1. Выберите входной файл с текстом, содержащим домены
+          2. Выберите выходной файл для сохранения результатов
+          3. Настройте параметры обработки:
+             - Формат домена (полный, без TLD, только TLD)
+             - Префикс и суффикс
+             - Разделитель
+             - Дополнительные опции
+          4. Нажмите "Обработать файл" или "Предпросмотр"
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+  build-windows-portable:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        
+    - name: Build portable version (onedir)
+      run: |
+        pyinstaller --onedir --windowed --name="DomainExtractor" domain_extractor.py
+        
+    - name: Create portable package
+      run: |
+        mkdir portable
+        xcopy /E /I dist\DomainExtractor portable\DomainExtractor
+        echo "# Domain Extractor - Portable Version" > portable\README.txt
+        echo "" >> portable\README.txt
+        echo "Запустите DomainExtractor\DomainExtractor.exe" >> portable\README.txt
+        
+    - name: Create ZIP archive
+      run: |
+        powershell Compress-Archive -Path portable\* -DestinationPath DomainExtractor-Windows-Portable.zip
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: DomainExtractor-Windows-Portable
+        path: DomainExtractor-Windows-Portable.zip
