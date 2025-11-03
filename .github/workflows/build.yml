@@ -34,27 +34,35 @@ jobs:
       run: |
         pyinstaller --onedir --windowed --name="DomainExtractor" domain_extractor.py
         
+    - name: Verify build output
+      run: |
+        dir dist
+        
     - name: Create portable package
       run: |
-        mkdir portable
-        xcopy /E /I dist\DomainExtractor portable\DomainExtractor
-        echo "# Domain Extractor - Portable Version" > portable\README.txt
-        echo "" >> portable\README.txt
-        echo "Программа для извлечения и обработки доменных имен из файлов." >> portable\README.txt
-        echo "" >> portable\README.txt
-        echo "Инструкция по использованию:" >> portable\README.txt
-        echo "1. Запустите DomainExtractor\DomainExtractor.exe" >> portable\README.txt
-        echo "2. Выберите входной файл с доменами" >> portable\README.txt
-        echo "3. Выберите выходной файл для результатов" >> portable\README.txt
-        echo "4. Настройте параметры обработки" >> portable\README.txt
-        echo "5. Нажмите 'Обработать файл'" >> portable\README.txt
-        echo "" >> portable\README.txt
-        echo "Все библиотеки включены в папку DomainExtractor." >> portable\README.txt
-        echo "Можно запускать с флешки или любого другого носителя." >> portable\README.txt
+        New-Item -ItemType Directory -Force -Path portable
+        Copy-Item -Path "dist\DomainExtractor" -Destination "portable\DomainExtractor" -Recurse -Force
+        @"
+        # Domain Extractor - Portable Version
+        
+        Программа для извлечения и обработки доменных имен из файлов.
+        
+        Инструкция по использованию:
+        1. Запустите DomainExtractor\DomainExtractor.exe
+        2. Выберите входной файл с доменами
+        3. Выберите выходной файл для результатов
+        4. Настройте параметры обработки
+        5. Нажмите 'Обработать файл'
+        
+        Все библиотеки включены в папку DomainExtractor.
+        Можно запускать с флешки или любого другого носителя.
+        "@ | Out-File -FilePath "portable\README.txt" -Encoding UTF8
+      shell: pwsh
         
     - name: Create ZIP archive
       run: |
-        powershell Compress-Archive -Path portable\* -DestinationPath DomainExtractor-Windows-Portable.zip
+        Compress-Archive -Path portable\* -DestinationPath DomainExtractor-Windows-Portable.zip -Force
+      shell: pwsh
         
     - name: Upload artifact
       uses: actions/upload-artifact@v4
