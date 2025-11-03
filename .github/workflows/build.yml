@@ -26,7 +26,7 @@ jobs:
         
     - name: Build portable version (onedir)
       run: |
-        pyinstaller --onedir --windowed --name="DomainExtractor" --icon=icon.ico domain_extractor.py
+        pyinstaller --onedir --windowed --name="DomainExtractor" domain_extractor.py
       continue-on-error: true
       
     - name: Build portable version (without icon)
