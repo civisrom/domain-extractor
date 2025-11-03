@@ -7,111 +7,6 @@ on:
   workflow_dispatch:  # Ручной запуск
 
 jobs:
-  build-windows:
-    runs-on: windows-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-        
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install pyinstaller
-        
-    - name: Build executable
-      run: |
-        pyinstaller --onefile --windowed --name="DomainExtractor" --icon=icon.ico domain_extractor.py
-      continue-on-error: true
-      
-    - name: Build executable (without icon)
-      if: failure()
-      run: |
-        pyinstaller --onefile --windowed --name="DomainExtractor" domain_extractor.py
-        
-    - name: Create distribution folder
-      run: |
-        mkdir distribution
-        copy dist\DomainExtractor.exe distribution\
-        echo "# Domain Extractor - Обработчик доменных имен" > distribution\README.txt
-        echo "" >> distribution\README.txt
-        echo "Программа для извлечения и обработки доменных имен из файлов." >> distribution\README.txt
-        echo "" >> distribution\README.txt
-        echo "Инструкция по использованию:" >> distribution\README.txt
-        echo "1. Запустите DomainExtractor.exe" >> distribution\README.txt
-        echo "2. Выберите входной файл с доменами" >> distribution\README.txt
-        echo "3. Выберите выходной файл для результатов" >> distribution\README.txt
-        echo "4. Настройте параметры обработки" >> distribution\README.txt
-        echo "5. Нажмите 'Обработать файл'" >> distribution\README.txt
-        
-    - name: Create ZIP archive
-      run: |
-        powershell Compress-Archive -Path distribution\* -DestinationPath DomainExtractor-Windows-x64.zip
-        
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: DomainExtractor-Windows
-        path: DomainExtractor-Windows-x64.zip
-        
-    - name: Get version from tag
-      id: get_version
-      shell: bash
-      run: |
-        if [[ $GITHUB_REF == refs/tags/* ]]; then
-          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-        else
-          echo "VERSION=dev-$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
-        fi
-        
-    - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v1
-      with:
-        files: |
-          DomainExtractor-Windows-x64.zip
-        body: |
-          ## Domain Extractor ${{ steps.get_version.outputs.VERSION }}
-          
-          ### Скачать
-          - **Windows (x64)**: DomainExtractor-Windows-x64.zip
-          
-          ### Новое в этой версии
-          - Извлечение доменных имен из файлов
-          - Настраиваемые форматы вывода
-          - Поддержка префиксов и суффиксов
-          - Различные разделители (строка, пробел, запятая, табуляция)
-          - Удаление дубликатов и сортировка
-          - Предпросмотр результатов
-          
-          ### Системные требования
-          - Windows 10/11 (64-bit)
-          - Не требует установки Python
-          
-          ### Установка
-          1. Скачайте архив DomainExtractor-Windows-x64.zip
-          2. Распакуйте в любую папку
-          3. Запустите DomainExtractor.exe
-          
-          ### Использование
-          1. Выберите входной файл с текстом, содержащим домены
-          2. Выберите выходной файл для сохранения результатов
-          3. Настройте параметры обработки:
-             - Формат домена (полный, без TLD, только TLD)
-             - Префикс и суффикс
-             - Разделитель
-             - Дополнительные опции
-          4. Нажмите "Обработать файл" или "Предпросмотр"
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        
   build-windows-portable:
     runs-on: windows-latest
     
@@ -131,6 +26,12 @@ jobs:
         
     - name: Build portable version (onedir)
       run: |
+        pyinstaller --onedir --windowed --name="DomainExtractor" --icon=icon.ico domain_extractor.py
+      continue-on-error: true
+      
+    - name: Build portable version (without icon)
+      if: failure()
+      run: |
         pyinstaller --onedir --windowed --name="DomainExtractor" domain_extractor.py
         
     - name: Create portable package
@@ -139,7 +40,17 @@ jobs:
         xcopy /E /I dist\DomainExtractor portable\DomainExtractor
         echo "# Domain Extractor - Portable Version" > portable\README.txt
         echo "" >> portable\README.txt
-        echo "Запустите DomainExtractor\DomainExtractor.exe" >> portable\README.txt
+        echo "Программа для извлечения и обработки доменных имен из файлов." >> portable\README.txt
+        echo "" >> portable\README.txt
+        echo "Инструкция по использованию:" >> portable\README.txt
+        echo "1. Запустите DomainExtractor\DomainExtractor.exe" >> portable\README.txt
+        echo "2. Выберите входной файл с доменами" >> portable\README.txt
+        echo "3. Выберите выходной файл для результатов" >> portable\README.txt
+        echo "4. Настройте параметры обработки" >> portable\README.txt
+        echo "5. Нажмите 'Обработать файл'" >> portable\README.txt
+        echo "" >> portable\README.txt
+        echo "Все библиотеки включены в папку DomainExtractor." >> portable\README.txt
+        echo "Можно запускать с флешки или любого другого носителя." >> portable\README.txt
         
     - name: Create ZIP archive
       run: |
@@ -150,6 +61,75 @@ jobs:
       with:
         name: DomainExtractor-Windows-Portable
         path: DomainExtractor-Windows-Portable.zip
+        
+    - name: Get version from tag
+      id: get_version
+      shell: bash
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        else
+          echo "VERSION=dev-$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          DomainExtractor-Windows-Portable.zip
+        body: |
+          ## Domain Extractor ${{ steps.get_version.outputs.VERSION }}
+          
+          ### 📥 Скачать
+          - **Windows Portable (x64)**: DomainExtractor-Windows-Portable.zip
+          
+          ### ✨ Возможности
+          - Извлечение доменных имен из файлов с любым текстом
+          - Настраиваемые форматы вывода (полный домен, без TLD, только TLD)
+          - Поддержка префиксов и суффиксов для гибкого форматирования
+          - Различные разделители (строка, пробел, запятая, табуляция)
+          - Удаление дубликатов и сортировка результатов
+          - Предпросмотр первых 100 записей
+          - Обработка больших файлов
+          - Удаление www. из доменов
+          
+          ### 💻 Системные требования
+          - Windows 10/11 (64-bit)
+          - Не требует установки Python
+          - Портативная версия - можно запускать с флешки
+          
+          ### 🚀 Установка
+          1. Скачайте архив **DomainExtractor-Windows-Portable.zip**
+          2. Распакуйте в любую папку (или на флешку)
+          3. Откройте папку **DomainExtractor**
+          4. Запустите **DomainExtractor.exe**
+          
+          ### 📖 Использование
+          1. Выберите входной файл с текстом, содержащим домены
+          2. Выберите выходной файл для сохранения результатов
+          3. Настройте параметры обработки:
+             - **Формат домена**: полный (domain.com), без TLD (domain), только TLD (.com)
+             - **Префикс**: текст перед доменом (например, https://)
+             - **Суффикс**: текст после домена (например, /api)
+             - **Разделитель**: как разделять домены в выходном файле
+             - **Дополнительные опции**: удалить www, дубликаты, сортировка
+          4. Нажмите "Обработать файл" или "Предпросмотр (100 записей)"
+          
+          ### 📝 Пример
+          **Входной файл:**
+          ```
+          Посетите example.com и www.test.org для информации
+          Email: admin@site.net
+          ```
+          
+          **Результат (полный домен, без www):**
+          ```
+          example.com
+          test.org
+          site.net
+          ```
         draft: false
-        prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        generate_release_notes: true
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
