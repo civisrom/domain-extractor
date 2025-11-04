@@ -29,7 +29,7 @@ jobs:
         Remove-Item -Recurse -Force dist, build -ErrorAction SilentlyContinue
       shell: pwsh
 
-    - name: Build with PyInstaller (spec)
+    - name: Build with PyInstaller
       shell: pwsh
       run: |
         Write-Output "Building with DomainExtractor.spec..."
