@@ -2,25 +2,34 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 from PyInstaller.utils.hooks import collect_data_files
-import sys
 from pathlib import Path
+import os
 
 block_cipher = None
+
+# === Определяем файлы для datas ===
+datas = []
+
+# Добавляем config, если существует
+config_path = Path('domain_extractor_config.json')
+if config_path.exists():
+    datas.append((str(config_path), '.'))
+
+# Добавляем иконку, если существует
+icon_path = Path('icon.ico')
+if icon_path.exists():
+    datas.append((str(icon_path), '.'))
 
 # === Анализ ===
 a = Analysis(
     ['domain_extractor.py'],
     pathex=[],
     binaries=[],
-    datas=[
-        # Конфиг и иконка — если есть
-        ('domain_extractor_config.json', '.') if Path('domain_extractor_config.json').exists() else None,
-        ('icon.ico', '.') if Path('icon.ico').exists() else None,
-    ],
+    datas=datas,  # ← Только валидные кортежи
     hiddenimports=[
-        'chardet',                    # ← ОБЯЗАТЕЛЬНО!
-        'chardet.universaldetector',  # ← Иногда нужно явно
-        'tkinter.dnd',                # Drag & Drop
+        'chardet',
+        'chardet.universaldetector',
+        'tkinter.dnd',
     ],
     hookspath=[],
     hooksconfig={},
@@ -31,9 +40,6 @@ a = Analysis(
     cipher=block_cipher,
     noarchive=False,
 )
-
-# Убираем None из datas
-a.datas = [x for x in a.datas if x is not None]
 
 # === PYZ ===
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
@@ -51,15 +57,15 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    console=False,  # GUI
+    console=False,
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='icon.ico' if Path('icon.ico').exists() else None,
+    icon=str(icon_path) if icon_path.exists() else None,
 )
 
-# === Папка (onedir) ===
+# === COLLECT (onedir) ===
 coll = COLLECT(
     exe,
     a.binaries,
