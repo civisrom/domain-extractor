@@ -3,110 +3,72 @@ name: Build and Release Domain Extractor
 on:
   push:
     tags:
-      - 'v*' # Запуск при создании тега версии (например, v1.0.0)
-  workflow_dispatch: # Ручной запуск
+      - 'v*'  # Запуск при создании тега версии (например, v1.0.0)
+  workflow_dispatch:  # Ручной запуск
 
 jobs:
   build-windows-portable:
     runs-on: windows-latest
-
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
+      
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
-
+        
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller chardet
-
-    - name: Clean previous builds
+        pip install pyinstaller
+        
+    - name: Build portable version (onedir)
       run: |
-        Remove-Item -Recurse -Force dist, build -ErrorAction SilentlyContinue
-      shell: pwsh
-
-    - name: Build with PyInstaller
-      shell: pwsh
+        pyinstaller --onedir --windowed --name="DomainExtractor" --icon=icon.ico domain_extractor.py
+      continue-on-error: true
+      
+    - name: Build portable version (without icon)
+      if: failure()
       run: |
-        pyinstaller `
-          --onedir `
-          --windowed `
-          --name DomainExtractor `
-          --clean `
-          --distpath dist `
-          --workpath build `
-          domain_extractor.py
-        if ($LASTEXITCODE -ne 0) {
-          Write-Error "PyInstaller failed with exit code $LASTEXITCODE"
-          exit $LASTEXITCODE
-        }
-
+        pyinstaller --onedir --windowed --name="DomainExtractor" domain_extractor.py
+        
     - name: Verify build output
       run: |
-        Write-Output "=== Contents of dist/ ==="
-        if (Test-Path "dist") {
-          Get-ChildItem -Path "dist" -Recurse | ForEach-Object { Write-Output $_.FullName }
-        } else {
-          Write-Error "Directory 'dist/' does not exist!"
-          exit 1
-        }
-      shell: pwsh
-
-    - name: Find built directory
-      id: find_dist
-      run: |
-        $dir = Get-ChildItem -Path "dist" -Directory | Select-Object -First 1
-        if (-not $dir) {
-          Write-Error "No directory found in dist/ after PyInstaller build!"
-          exit 1
-        }
-        Write-Output "Found dist directory: $($dir.Name)"
-        echo "dist_dir=$($dir.Name)" >> $env:GITHUB_OUTPUT
-      shell: pwsh
-
+        dir dist
+        
     - name: Create portable package
       run: |
-        # Создаём папку portable
-        New-Item -ItemType Directory -Force -Path portable | Out-Null
-
-        # Копируем из найденной папки
-        $source = "dist/${{ steps.find_dist.outputs.dist_dir }}"
-        Copy-Item -Path $source -Destination "portable\DomainExtractor" -Recurse -Force
-
-        # Создаём README
-        $readme = @"
+        New-Item -ItemType Directory -Force -Path portable
+        Copy-Item -Path "dist\DomainExtractor" -Destination "portable\DomainExtractor" -Recurse -Force
+        @"
         # Domain Extractor - Portable Version
-
+        
         Программа для извлечения и обработки доменных имен из файлов.
-
-        ## Инструкция по использованию:
-        1. Запустите `DomainExtractor\DomainExtractor.exe`
+        
+        Инструкция по использованию:
+        1. Запустите DomainExtractor\DomainExtractor.exe
         2. Выберите входной файл с доменами
         3. Выберите выходной файл для результатов
         4. Настройте параметры обработки
         5. Нажмите 'Обработать файл'
-
-        Все библиотеки включены в папку `DomainExtractor`.
+        
+        Все библиотеки включены в папку DomainExtractor.
         Можно запускать с флешки или любого другого носителя.
-        "@
-        $readme | Out-File -FilePath "portable\README.txt" -Encoding UTF8
+        "@ | Out-File -FilePath "portable\README.txt" -Encoding UTF8
       shell: pwsh
-
+        
     - name: Create ZIP archive
       run: |
-        Compress-Archive -Path portable\* -DestinationPath DomainExtractor-Windows-Portable.zip -Force
-      shell: pwsh
-
+        powershell Compress-Archive -Path portable\* -DestinationPath DomainExtractor-Windows-Portable.zip
+        
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: DomainExtractor-Windows-Portable
         path: DomainExtractor-Windows-Portable.zip
-
+        
     - name: Get version from tag
       id: get_version
       shell: bash
@@ -116,19 +78,20 @@ jobs:
         else
           echo "VERSION=dev-$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
         fi
-
+        
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
-        files: DomainExtractor-Windows-Portable.zip
+        files: |
+          DomainExtractor-Windows-Portable.zip
         body: |
           ## Domain Extractor ${{ steps.get_version.outputs.VERSION }}
-
-          ### Скачать
-          - **Windows Portable (x64)**: [DomainExtractor-Windows-Portable.zip](https://github.com/${{ github.repository }}/releases/download/${{ steps.get_version.outputs.VERSION }}/DomainExtractor-Windows-Portable.zip)
-
-          ### Возможности
+          
+          ### 📥 Скачать
+          - **Windows Portable (x64)**: DomainExtractor-Windows-Portable.zip
+          
+          ### ✨ Возможности
           - Извлечение доменных имен из файлов с любым текстом
           - Настраиваемые форматы вывода (полный домен, без TLD, только TLD)
           - Поддержка префиксов и суффиксов для гибкого форматирования
@@ -137,28 +100,43 @@ jobs:
           - Предпросмотр первых 100 записей
           - Обработка больших файлов
           - Удаление www. из доменов
-
-          ### Системные требования
+          
+          ### 💻 Системные требования
           - Windows 10/11 (64-bit)
           - Не требует установки Python
           - Портативная версия - можно запускать с флешки
-
-          ### Установка
+          
+          ### 🚀 Установка
           1. Скачайте архив **DomainExtractor-Windows-Portable.zip**
           2. Распакуйте в любую папку (или на флешку)
           3. Откройте папку **DomainExtractor**
           4. Запустите **DomainExtractor.exe**
-
-          ### Использование
+          
+          ### 📖 Использование
           1. Выберите входной файл с текстом, содержащим домены
           2. Выберите выходной файл для сохранения результатов
           3. Настройте параметры обработки:
              - **Формат домена**: полный (domain.com), без TLD (domain), только TLD (.com)
-             - **Префикс**: текст перед доменом (например, `https://`)
-             - **Суффикс**: текст после домена (например, `/api`)
+             - **Префикс**: текст перед доменом (например, https://)
+             - **Суффикс**: текст после домена (например, /api)
              - **Разделитель**: как разделять домены в выходном файле
              - **Дополнительные опции**: удалить www, дубликаты, сортировка
-          4. Нажмите **"Обработать файл"** или **"Предпросмотр (100 записей)"**
-
-          ### Пример
+          4. Нажмите "Обработать файл" или "Предпросмотр (100 записей)"
+          
+          ### 📝 Пример
           **Входной файл:**
+          ```
+          Посетите example.com и www.test.org для информации
+          Email: admin@site.net
+          ```
+          
+          **Результат (полный домен, без www):**
+          ```
+          example.com
+          test.org
+          site.net
+          ```
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
