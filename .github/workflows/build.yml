@@ -30,16 +30,20 @@ jobs:
       shell: pwsh
 
     - name: Build with PyInstaller
-      run: |
-        pyinstaller ^
-          --onedir ^
-          --windowed ^
-          --name DomainExtractor ^
-          --clean ^
-          --distpath dist ^
-          --workpath build ^
-          domain_extractor.py
       shell: pwsh
+      run: |
+        pyinstaller `
+          --onedir `
+          --windowed `
+          --name DomainExtractor `
+          --clean `
+          --distpath dist `
+          --workpath build `
+          domain_extractor.py
+        if ($LASTEXITCODE -ne 0) {
+          Write-Error "PyInstaller failed with exit code $LASTEXITCODE"
+          exit $LASTEXITCODE
+        }
 
     - name: Verify build output
       run: |
