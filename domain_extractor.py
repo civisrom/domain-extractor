@@ -514,7 +514,7 @@ class DomainExtractorApp:
         """Сопоставление домена с паттерном (поддержка wildcard)"""
         pattern = pattern.replace('.', r'\.')
         pattern = pattern.replace('*', '.*')
-        pattern = f'^{pattern}
+        pattern = f'^{pattern}$'  # Исправлено: добавлены $ и закрывающая кавычка
         return bool(re.match(pattern, domain, re.IGNORECASE))
 
     def format_domain(self, domain):
