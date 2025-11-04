@@ -278,13 +278,15 @@ class DomainExtractorApp:
 
         ttk.Label(filter_frame, text="Удалить символы:").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
         ttk.Entry(filter_frame, textvariable=self.strip_chars).grid(row=0, column=1, sticky=(tk.W, tk.E), padx=5)
-        ttk.Label(filter_frame, text='Например: [](){}"\\'<>', foreground="gray").grid(
+
+        ttk.Label(filter_frame,
+                  text=r'Например: [](){}"\'<>' if os.name == 'nt' else 'Например: [](){}"\\\'<>',
+                  foreground="gray").grid(
             row=1, column=1, sticky=tk.W, padx=5)
 
         ttk.Label(filter_frame, text="Мин. длина домена:").grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
         ttk.Spinbox(filter_frame, from_=1, to=100, textvariable=self.min_length, width=10).grid(
             row=2, column=1, sticky=tk.W, padx=5)
-
         ttk.Label(filter_frame, text="Макс. длина домена:").grid(row=3, column=0, sticky=tk.W, padx=5, pady=5)
         ttk.Spinbox(filter_frame, from_=10, to=255, textvariable=self.max_length, width=10).grid(
             row=3, column=1, sticky=tk.W, padx=5)
